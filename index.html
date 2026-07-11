@@ -345,7 +345,7 @@
     <span class="laco">🎀</span>
     <h1>um passeio sanrio</h1>
     <p class="sub">tem 9 amiguinhos esperando por você no caminho até o bolo 🎂<br><br>
-    use as <b>setas</b> (ou deslize o dedo) pra andar.<br>cuidado com as nuvenzinhas bravas ☁️💢</p>
+    <span id="instrucao">use as <b>setas do teclado</b> pra andar.</span><br>cuidado com as nuvenzinhas bravas ☁️💢</p>
     <button class="btn" id="btnComecar">começar 💜</button>
   </div>
 </div>
@@ -837,11 +837,27 @@ document.addEventListener("keydown", e => {
               w:[0,-1], s:[0,1], a:[-1,0], d:[1,0] };
   if (m[e.key]) { e.preventDefault(); tenta(...m[e.key]); }
 });
+// no celular, explica os controles do jeito certo
+if (window.matchMedia("(pointer: coarse)").matches || "ontouchstart" in window) {
+  document.getElementById("instrucao").innerHTML =
+    "<b>deslize o dedo</b> pra andar, ou <b>segure as setinhas</b> da tela.";
+}
+
+// d-pad: toque anda 1 casinha; segurando, continua andando
 document.querySelectorAll("#dpad button").forEach(b => {
+  let segura = null;
+  const anda = () => tenta(+b.dataset.dx, +b.dataset.dy);
   b.addEventListener("pointerdown", e => {
     e.preventDefault();
-    tenta(+b.dataset.dx, +b.dataset.dy);
+    try { b.setPointerCapture(e.pointerId); } catch (err) {}
+    anda();
+    clearInterval(segura);
+    segura = setInterval(anda, 170);
   });
+  const solta = () => { clearInterval(segura); segura = null; };
+  b.addEventListener("pointerup", solta);
+  b.addEventListener("pointercancel", solta);
+  b.addEventListener("pointerleave", solta);
 });
 let swipe = null;
 document.getElementById("viewport").addEventListener("touchstart", e => {
