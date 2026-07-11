@@ -43,9 +43,11 @@ com confete + mensagem final.
 ✅ controles celular: swipe + setinhas com andar contínuo ao segurar;
    instrução da tela inicial adapta pc/celular
 
+✅ mensagemFinal no `CONFIG` ("e que venham mais anos e mais retrospectivas juntos…")
+✅ tela inicial enxuta (sem a frase dos 9 amiguinhos, só os controles)
+
 🔴 FALTA:
-1. **mensagemFinal** (ainda placeholder)
-2. **grid de caminhada da elodie** → Iagho gera no gpt a partir do Elodie.png e me manda;
+1. **grid de caminhada da elodie** → Iagho gera no gpt a partir do Elodie.png e me manda;
    eu processo (rembg/fatiar/normalizar) e salvo como `img/dog-grid.png`.
    **formato que o motor espera**: 4 quadros lado a lado numa única linha (grade 4×1),
    células do MESMO tamanho, personagem de perfil andando PARA A DIREITA (o motor
