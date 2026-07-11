@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>um passeio sanrio 💜</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { height:100%; overflow:hidden; overscroll-behavior:none; }
+  body {
+    font-family: "Segoe UI", -apple-system, sans-serif;
+    background: linear-gradient(180deg, #f6e3ff 0%, #ffe0f0 45%, #fff3f9 100%);
+    touch-action: none;
+    user-select: none; -webkit-user-select: none;
+  }
+
+  /* ---------- viewport / mapa ---------- */
+  #viewport {
+    position: fixed; inset: 0;
+    display: flex; justify-content: center;
+    overflow: hidden;
+  }
+  #world {
+    position: relative;
+    transition: transform .35s ease-out;
+    will-change: transform;
+  }
+  #mapa {
+    display: grid;
+    grid-template-columns: repeat(var(--cols), var(--t));
+    grid-auto-rows: var(--t);
+  }
+  .tile { position: relative; }
+  .tile.chao-a { background: #fbeaf6; }
+  .tile.chao-b { background: #f6e0f0; }
+  .tile.parede {
+    background: #c9a3e0;
+    border-radius: 22%;
+    box-shadow: inset 0 calc(var(--t) * -0.12) 0 #ae86cc, inset 0 calc(var(--t) * 0.08) 0 #ddc0f0;
+    transform: scale(.94);
+  }
+  .tile.parede .deco {
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size: calc(var(--t) * .45);
+    filter: saturate(.9);
+  }
+  .tile.meta {
+    background: #ffd9ec;
+  }
+  .tile .bolo-icone {
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size: calc(var(--t) * .8);
+    animation: flutua 2s ease-in-out infinite;
+  }
+  @keyframes flutua { 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(-8%);} }
+
+  /* ---------- amiguinhos no mapa ---------- */
+  .amiguinho {
+    position:absolute; z-index: 4;
+    width: var(--t); height: var(--t);
+    display:flex; align-items:center; justify-content:center;
+    transition: opacity .4s;
+  }
+  .amiguinho .corpo {
+    width: 86%; height: 86%;
+    border-radius: 50%;
+    display:flex; align-items:center; justify-content:center;
+    font-weight: 800; color:#fff;
+    font-size: calc(var(--t) * .42);
+    border: calc(var(--t)*.05) solid rgba(255,255,255,.8);
+    box-shadow: 0 calc(var(--t)*.06) 0 rgba(120,60,140,.25);
+    animation: flutua 1.6s ease-in-out infinite;
+    overflow:hidden;
+  }
+  .amiguinho img { width:100%; height:100%; object-fit:contain; display:none; }
+  .amiguinho.tem-img img { display:block; }
+  .amiguinho.tem-img .num { display:none; }
+  .amiguinho .balao {
+    position:absolute; top: -38%;
+    font-size: calc(var(--t)*.38);
+    animation: flutua 1.2s ease-in-out infinite;
+  }
+  .amiguinho.encontrado .corpo { animation:none; opacity:.55; }
+  .amiguinho.encontrado .balao::after { content:''; }
+
+  /* ---------- player ---------- */
+  #player {
+    position:absolute; z-index: 6;
+    width: var(--t); height: var(--t);
+    transition: left .13s linear, top .13s linear;
+    will-change: left, top;
+  }
+  #player .sprite {
+    width: 130%; height: 130%;
+    margin: -15% 0 0 -15%;
+    transition: transform .1s;
+  }
+  #player.olha-esq .sprite { transform: scaleX(-1); }
+  #player img { width:100%; height:100%; object-fit:contain; display:none; }
+  #player.tem-img img { display:block; }
+  #player.tem-img svg { display:none; }
+  #player .gridsprite {
+    display:none; width:100%; height:100%;
+    background-repeat:no-repeat;
+    background-position: 0% 0;
+    image-rendering: pixelated;
+  }
+  #player.tem-grid .gridsprite { display:block; }
+  #player.tem-grid img, #player.tem-grid svg { display:none; }
+  #player.pula .sprite { animation: pulinho .25s; }
+  @keyframes pulinho { 50% { margin-top: -28%; } }
+  #player.wobble .sprite { animation: treme .3s; }
+  @keyframes treme {
+    25% { transform: translateX(-8%) rotate(-6deg); }
+    75% { transform: translateX(8%) rotate(6deg); }
+  }
+  #player.olha-esq.wobble .sprite { animation: tremeEsq .3s; }
+  @keyframes tremeEsq {
+    25% { transform: scaleX(-1) translateX(-8%) rotate(-6deg); }
+    75% { transform: scaleX(-1) translateX(8%) rotate(6deg); }
+  }
+
+  /* ---------- nuvens ---------- */
+  .nuvem {
+    position:absolute; z-index:5;
+    width: var(--t); height: var(--t);
+    display:flex; align-items:center; justify-content:center;
+    font-size: calc(var(--t)*.72);
+    transition: left .55s linear;
+    filter: drop-shadow(0 3px 2px rgba(140,90,180,.3));
+  }
+  .nuvem::after {
+    content:'💢'; position:absolute;
+    font-size: calc(var(--t)*.26);
+    top: 12%; right: 8%;
+  }
+
+  /* ---------- sparkle ---------- */
+  .sparkle {
+    position:absolute; z-index: 8;
+    font-size: calc(var(--t)*.6);
+    pointer-events:none;
+    animation: sobe .8s forwards;
+  }
+  @keyframes sobe {
+    from { opacity:1; transform: translateY(0) scale(.6); }
+    to   { opacity:0; transform: translateY(calc(var(--t)*-1.2)) scale(1.3); }
+  }
+
+  /* ---------- HUD ---------- */
+  #hud {
+    position: fixed; top: 0; left:0; right:0; z-index: 20;
+    display:flex; justify-content:center;
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) 10px 0;
+    pointer-events:none;
+  }
+  #hud .pill {
+    background: rgba(255,255,255,.85);
+    border: 2px solid #e3b8f5;
+    border-radius: 999px;
+    padding: 7px 16px;
+    font-size: 15px; font-weight:700; color:#8b5aa8;
+    display:flex; gap:8px; align-items:center;
+    box-shadow: 0 3px 10px rgba(150,90,190,.18);
+    backdrop-filter: blur(4px);
+  }
+  #hud .slot { opacity:.3; transition: opacity .3s, transform .3s; }
+  #hud .slot.on { opacity:1; transform: scale(1.15); }
+
+  /* ---------- d-pad ---------- */
+  #dpad {
+    position: fixed; z-index:20;
+    left: 50%; transform: translateX(-50%);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+    display: none;
+    grid-template-columns: repeat(3, 58px);
+    grid-template-rows: repeat(2, 58px);
+    gap: 8px;
+  }
+  @media (pointer: coarse) { #dpad { display:grid; } }
+  #dpad button {
+    border: 2px solid #e3b8f5;
+    background: rgba(255,255,255,.75);
+    border-radius: 18px;
+    font-size: 24px; color:#8b5aa8;
+    box-shadow: 0 3px 0 rgba(150,90,190,.25);
+    backdrop-filter: blur(3px);
+  }
+  #dpad button:active { transform: translateY(2px); box-shadow:none; background:#fbe6ff; }
+  #dpad .cima  { grid-column:2; grid-row:1; }
+  #dpad .esq   { grid-column:1; grid-row:2; }
+  #dpad .baixo { grid-column:2; grid-row:2; }
+  #dpad .dir   { grid-column:3; grid-row:2; }
+
+  /* ---------- overlays / modais ---------- */
+  .overlay {
+    position: fixed; inset:0; z-index: 50;
+    display:flex; align-items:center; justify-content:center;
+    padding: 22px;
+    background: rgba(90,40,110,.35);
+    backdrop-filter: blur(3px);
+    opacity:0; pointer-events:none;
+    transition: opacity .3s;
+  }
+  .overlay.aberto { opacity:1; pointer-events:auto; }
+  .cartao {
+    background: #fffafd;
+    border: 3px solid #e3b8f5;
+    border-radius: 26px;
+    box-shadow: 0 12px 40px rgba(90,40,120,.35);
+    padding: 26px 22px;
+    max-width: 340px; width:100%;
+    text-align:center;
+    transform: translateY(16px) scale(.96);
+    transition: transform .3s;
+  }
+  .overlay.aberto .cartao { transform: translateY(0) scale(1); }
+  .cartao .pic {
+    width: 110px; height:110px; margin: 0 auto 12px;
+    border-radius: 50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 44px; font-weight:800; color:#fff;
+    border: 3px solid #fff;
+    box-shadow: 0 4px 14px rgba(150,90,190,.3);
+    overflow:hidden;
+  }
+  .cartao .pic img { width:100%; height:100%; object-fit:contain; display:none; }
+  .cartao .pic.tem-img img { display:block; }
+  .cartao .pic.tem-img .num { display:none; }
+  .cartao h2 { color:#8b5aa8; font-size:20px; margin-bottom:8px; }
+  .cartao p  { color:#7a6b85; font-size:15px; line-height:1.5; white-space:pre-line; overflow-wrap:break-word; }
+  #modalTexto {
+    text-align: left;
+    max-height: 42dvh;
+    overflow-y: auto;
+    padding-right: 6px;
+  }
+  /* cartinha em imagem (amiguinho com "imagem" no CONFIG) */
+  .cartinha-wrap { display:none; }
+  .cartinha-wrap.on { display:block; }
+  .cartinha-wrap img {
+    max-width: 100%; max-height: 38dvh;
+    border-radius: 14px;
+    border: 2px solid #e3b8f5;
+    box-shadow: 0 6px 18px rgba(120,60,150,.25);
+    cursor: zoom-in;
+  }
+  .cartinha-wrap .dica { font-size: 12.5px; color:#a98cc0; margin-top: 6px; }
+
+  /* ---------- lightbox (zoom na cartinha) ---------- */
+  #lightbox {
+    position: fixed; inset: 0; z-index: 80;
+    background: rgba(22,8,30,.93);
+    display: none; align-items: center; justify-content: center;
+    overflow: hidden;
+    touch-action: none;
+  }
+  #lightbox.aberto { display: flex; }
+  #lbImg {
+    max-width: 96vw; max-height: 92dvh;
+    user-select: none; -webkit-user-drag: none;
+    will-change: transform;
+    cursor: grab;
+    border-radius: 6px;
+  }
+  #lbFechar {
+    position: absolute; z-index: 2;
+    top: calc(env(safe-area-inset-top, 0px) + 12px); right: 14px;
+    width: 44px; height: 44px;
+    border: 2px solid #e3b8f5; border-radius: 50%;
+    background: rgba(255,255,255,.92);
+    color: #8b5aa8; font-size: 20px; font-weight: 800;
+    cursor: pointer;
+  }
+  #lbDica {
+    position: absolute; z-index: 2;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+    left: 50%; transform: translateX(-50%);
+    background: rgba(255,255,255,.14);
+    color: #e8d6f5; font-size: 12.5px;
+    padding: 6px 14px; border-radius: 999px;
+    max-width: 86vw; text-align: center;
+    pointer-events: none;
+  }
+  .cartao .btn {
+    margin-top: 18px;
+    border:none; cursor:pointer;
+    background: linear-gradient(180deg, #d9a6f2, #b97fe0);
+    color:#fff; font-weight:800; font-size:16px;
+    padding: 12px 30px; border-radius: 999px;
+    box-shadow: 0 4px 0 #9a5fc4;
+  }
+  .cartao .btn:active { transform: translateY(3px); box-shadow:none; }
+
+  /* ---------- tela inicial ---------- */
+  #telaInicio { background: linear-gradient(180deg, #e9c8ff 0%, #ffd6ec 100%); }
+  #telaInicio .cartao { background: transparent; border:none; box-shadow:none; max-width: 420px; }
+  #telaInicio h1 {
+    font-size: 34px; color:#7d3fa8;
+    text-shadow: 0 2px 0 #fff;
+    margin-bottom: 6px;
+  }
+  #telaInicio .sub { color:#a06cc0; font-size:16px; margin-bottom: 22px; }
+  #telaInicio .laco { font-size: 60px; display:block; margin-bottom: 8px; animation: flutua 2s ease-in-out infinite; }
+
+  /* ---------- final ---------- */
+  #telaFinal { background: linear-gradient(180deg, rgba(120,60,160,.75), rgba(255,120,190,.7)); }
+  #telaFinal .cartao { max-width: 380px; }
+  #telaFinal .bolo {
+    width: 130px; height:130px; margin:0 auto 8px;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 90px;
+    animation: flutua 2s ease-in-out infinite;
+  }
+  #telaFinal .bolo img { width:100%; height:100%; object-fit:contain; display:none; }
+  #telaFinal .bolo.tem-img img { display:block; }
+  #telaFinal .bolo.tem-img .emoji { display:none; }
+  .confete {
+    position: fixed; top: -20px; z-index: 60;
+    font-size: 20px; pointer-events:none;
+    animation: cai linear forwards;
+  }
+  @keyframes cai {
+    to { transform: translateY(110vh) rotate(720deg); opacity:.7; }
+  }
+</style>
+</head>
+<body>
+
+<div id="viewport"><div id="world"><div id="mapa"></div></div></div>
+
+<div id="hud"><div class="pill">💜 amiguinhos: <span id="cont">0</span>/9 <span id="slots"></span></div></div>
+
+<div id="dpad">
+  <button class="cima"  data-dx="0"  data-dy="-1">▲</button>
+  <button class="esq"   data-dx="-1" data-dy="0">◀</button>
+  <button class="baixo" data-dx="0"  data-dy="1">▼</button>
+  <button class="dir"   data-dx="1"  data-dy="0">▶</button>
+</div>
+
+<!-- tela inicial -->
+<div class="overlay aberto" id="telaInicio">
+  <div class="cartao">
+    <span class="laco">🎀</span>
+    <h1>um passeio sanrio</h1>
+    <p class="sub">tem 9 amiguinhos esperando por você no caminho até o bolo 🎂<br><br>
+    use as <b>setas</b> (ou deslize o dedo) pra andar.<br>cuidado com as nuvenzinhas bravas ☁️💢</p>
+    <button class="btn" id="btnComecar">começar 💜</button>
+  </div>
+</div>
+
+<!-- modal do amiguinho -->
+<div class="overlay" id="modalAmiguinho">
+  <div class="cartao">
+    <div class="pic" id="modalPic"><span class="num" id="modalNum">1</span><img id="modalImg" alt=""></div>
+    <h2 id="modalNome">amiguinho 1</h2>
+    <p id="modalTexto"></p>
+    <div class="cartinha-wrap" id="cartinhaWrap">
+      <img id="cartinhaImg" alt="cartinha">
+      <div class="dica">toque na cartinha pra ampliar e ler com calma 🔍</div>
+    </div>
+    <button class="btn" id="btnContinuar">continuar 💜</button>
+  </div>
+</div>
+
+<!-- lightbox: cartinha ampliada com zoom -->
+<div id="lightbox">
+  <img id="lbImg" alt="cartinha" draggable="false">
+  <button id="lbFechar">✕</button>
+  <div id="lbDica">arraste pra mover · pinça ou rolinho pra zoom · toque duplo amplia</div>
+</div>
+
+<!-- aviso do bolo (faltam amiguinhos) -->
+<div class="overlay" id="modalBolo">
+  <div class="cartao">
+    <div class="bolo" style="font-size:70px; margin:0 auto 8px; width:auto; height:auto;">🎂</div>
+    <h2>calma, calma!</h2>
+    <p id="modalBoloTexto">ainda tem amiguinhos te esperando no caminho…</p>
+    <button class="btn" id="btnBoloVoltar">vou procurar! 🔍</button>
+  </div>
+</div>
+
+<!-- tela final -->
+<div class="overlay" id="telaFinal">
+  <div class="cartao">
+    <div class="bolo" id="boloFinal"><span class="emoji">🎂</span><img src="img/bolo.png" alt=""></div>
+    <h2 style="font-size:26px;">feliz aniversário!! 🎉</h2>
+    <p id="mensagemFinal"></p>
+    <button class="btn" id="btnDeNovo">jogar de novo 🎀</button>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   CONFIG — edite aqui os nomes, textinhos e a mensagem final.
+   as imagens vão em img/ :
+     img/dog.png            → a pinsher com chapéu da kuromi
+     img/p1.png … img/p6.png → os 6 amiguinhos
+     img/bolo.png           → o bolo da tela final
+     musica.mp3             → trilha (opcional)
+   se a imagem não existir, o jogo usa um placeholder fofo.
+===================================================================== */
+const CONFIG = {
+  amiguinhos: [
+    { nome: "eliza", texto: `Oier. Acho que tenho um único arrependimento muito grande de estar aqui hoje, que é não ter sido presente antes. Mas infelizmente o tempo ele nunca diz quando vou descobrir pessoas surpreendentes iguais a você, e eu não digo de forma generalizante até porque de uns tempos pra cá a sua importância pra mim vem sendo exponencial, e aumentando de forma gradativa. E por isso eu quero que você se sinta retribuida por todas as vezes que você esteve comigo, até em momentos que eu realmente precisei. E na verdade é o mínimo que eu e todo mundo aqui poderia fazer por você. Eu te desejo todas as maiores bençãos que o universo possa lhe dar, e sempre que tiver as vezes que a sua mente sabota você mesma, eu vou tá presente com você sempre.` },
+    { nome: "dylan", texto: "(textinho do dylan 💌)" },
+    { nome: "kaia", texto: `Feliz aniversário, irmã!
+
+Te desejo tudo de melhor: muita paz, amor, saúde, felicidade e sucesso. Que esse novo ciclo seja repleto de conquistas, momentos especiais e pessoas que te façam bem.
+
+Você é uma pessoa muito especial, nunca duvide disso. Espero que a gente possa conversar mais, criar ainda mais momentos juntas e fortalecer nossa amizade.
+
+Aproveita muito o seu dia, porque ele é todo seu! E lembre-se: pode contar comigo sempre.` },
+    { nome: "richard", texto: `Hoje é o seu dia, piquinesss! 🎉💖
+
+Como acontece com qualquer amizade, quando a gente se conheceu não existia toda essa intimidade que temos hoje. Mas eu lembro de ter pensado que a gente ainda seria muito amigo, e fico feliz por ter acertado. Você entrou pra nossa família e, junto com isso, eu tive a oportunidade de te conhecer de verdade, construir uma amizade cheia de momentos bons e dar risada de incontáveis besteiras com você.
+
+Hoje eu posso dizer, sem exagero, que você é uma pessoa que eu considero muito. Não só pela amizade que construímos, mas porque você se tornou uma irmã de verdade pra mim. Obrigado por cada conversa, pelas brincadeiras, pelas risadas, (pelas ImplicânciasKKKK) e por ser exatamente quem você é.
+
+Saiba que pode contar comigo sempre, seja pros momentos felizes, pra reclamar da vida, ou só pra passar o tempo falando qualquer bobagem. Vou estar aqui. E pode ter certeza de que é uma honra ser o seu gêmeo hoje em dia.
+
+Espero que esse novo ciclo te traga muita felicidade, saúde, paz e que você continue espalhando essa energia boa por onde passa. Que nunca faltem motivos pra sorrir, nem pessoas que façam o seu coração se sentir em casa.
+
+E, como toda boa fã da Sanrio, desejo que seu dia seja tão fofinho quanto a Hello Kitty, tão alegre quanto a My Melody, tão cheio de sorte quanto o Cinnamoroll e que você nunca perca esse jeitinho de misturar a fofura da Hello Kitty com a personalidade marcante da Kuromi. Que seu novo ciclo seja tão especial quanto você merece. 🩷🎀🖤
+
+Feliz aniversário, Soraia ou.... Soso, Elodie, Nathalie e Piquines! resumindo: feliz aniversário pra todas as suas versões. Que esse seja apenas o começo de mais um ano incrível. Te desejo tudo de melhor, irmã. — R.` },
+    { nome: "kael", texto: `𝘈 𝘷𝘪𝘥𝘢 𝘵𝘦𝘮 𝘶𝘮 𝘫𝘦𝘪𝘵𝘰 𝘤𝘶𝘳𝘪𝘰𝘴𝘰 𝘥𝘦 𝘧𝘢𝘻𝘦𝘳 𝘢𝘴 𝘱𝘦𝘴𝘴𝘰𝘢𝘴 𝘴𝘦 𝘦𝘯𝘤𝘰𝘯𝘵𝘳𝘢𝘳𝘦𝘮 𝘥𝘦 𝘯𝘰𝘷𝘰. 𝘈 𝘨𝘦𝘯𝘵𝘦 𝘴𝘦 𝘤𝘰𝘯𝘩𝘦𝘤𝘦𝘶 𝘩𝘢́ 𝘮𝘶𝘪𝘵𝘰 𝘵𝘦𝘮𝘱𝘰, 𝘤𝘩𝘦𝘨𝘢𝘮𝘰𝘴 𝘢 𝘯𝘰𝘴 𝘢𝘱𝘳𝘰𝘹𝘪𝘮𝘢𝘳, 𝘮𝘢𝘴 𝘢 𝘷𝘪𝘥𝘢 𝘢𝘤𝘢𝘣𝘰𝘶 𝘯𝘰𝘴 𝘭𝘦𝘷𝘢𝘯𝘥𝘰 𝘱𝘢𝘳𝘢 𝘤𝘢𝘮𝘪𝘯𝘩𝘰𝘴 𝘥𝘪𝘧𝘦𝘳𝘦𝘯𝘵𝘦𝘴. 𝘌, 𝘲𝘶𝘢𝘯𝘥𝘰 𝘦𝘶 𝘮𝘦𝘯𝘰𝘴 𝘦𝘴𝘱𝘦𝘳𝘢𝘷𝘢, 𝘰 𝘥𝘦𝘴𝘵𝘪𝘯𝘰 𝘳𝘦𝘴𝘰𝘭𝘷𝘦𝘶 𝘯𝘰𝘴 𝘤𝘰𝘭𝘰𝘤𝘢𝘳 𝘯𝘢 𝘮𝘦𝘴𝘮𝘢 𝘧𝘢𝘮𝘪́𝘭𝘪𝘢 𝘥𝘦 𝘯𝘰𝘷𝘰. 𝘌 𝘧𝘰𝘪 𝘢𝘪́ 𝘲𝘶𝘦 𝘦𝘶 𝘱𝘦𝘳𝘤𝘦𝘣𝘪 𝘲𝘶𝘦 𝘢𝘪𝘯𝘥𝘢 𝘵𝘪𝘯𝘩𝘢 𝘮𝘶𝘪𝘵𝘢 𝘤𝘰𝘪𝘴𝘢 𝘱𝘳𝘢 𝘤𝘰𝘯𝘩𝘦𝘤𝘦𝘳 𝘦𝘮 𝘵𝘪.
+
+𝘏𝘰𝘫𝘦 𝘦𝘶 𝘱𝘰𝘴𝘴𝘰 𝘥𝘪𝘻𝘦𝘳, 𝘤𝘰𝘮 𝘵𝘰𝘥𝘢 𝘤𝘦𝘳𝘵𝘦𝘻𝘢, 𝘲𝘶𝘦 𝘦𝘴𝘴𝘦 𝘳𝘦𝘦𝘯𝘤𝘰𝘯𝘵𝘳𝘰 𝘧𝘰𝘪 𝘶𝘮𝘢 𝘥𝘢𝘴 𝘮𝘦𝘭𝘩𝘰𝘳𝘦𝘴 𝘤𝘰𝘪𝘴𝘢𝘴 𝘲𝘶𝘦 𝘦𝘴𝘴𝘦 𝘙𝘗𝘎 𝘮𝘦 𝘱𝘳𝘰𝘱𝘰𝘳𝘤𝘪𝘰𝘯𝘰𝘶. 𝘛𝘶 𝘵𝘦 𝘵𝘰𝘳𝘯𝘢𝘴𝘵𝘦 𝘢𝘭𝘨𝘶𝘦́𝘮 𝘲𝘶𝘦 𝘦𝘶 𝘢𝘥𝘮𝘪𝘳𝘰 𝘮𝘶𝘪𝘵𝘰, 𝘯𝘢̃𝘰 𝘴𝘰́ 𝘱𝘦𝘭𝘰 𝘵𝘦𝘶 𝘫𝘦𝘪𝘵𝘰 𝘥𝘦 acolher às pessoas, 𝘮𝘢𝘴 𝘱𝘦𝘭𝘢 𝘱𝘦𝘴𝘴𝘰𝘢 𝘲𝘶𝘦 𝘵𝘶 𝘦́𝘴. 𝘈𝘭𝘨𝘶𝘦́𝘮 𝘲𝘶𝘦 𝘦𝘴𝘵𝘢́ 𝘴𝘦𝘮𝘱𝘳𝘦 𝘢𝘭𝘪, 𝘲𝘶𝘦 𝘵𝘳𝘢𝘻 𝘭𝘦𝘷𝘦𝘻𝘢, 𝘲𝘶𝘦 𝘧𝘢𝘻 𝘳𝘪𝘳 𝘦 𝘲𝘶𝘦 𝘤𝘰𝘯𝘴𝘦𝘨𝘶𝘦 𝘧𝘢𝘻𝘦𝘳 𝘲𝘶𝘢𝘭𝘲𝘶𝘦𝘳 𝘮𝘰𝘮𝘦𝘯𝘵𝘰 𝘧𝘪𝘤𝘢𝘳 𝘮𝘦𝘭𝘩𝘰𝘳.
+
+𝘋𝘦𝘴𝘦𝘫𝘰 𝘲𝘶𝘦 𝘰 𝘵𝘦𝘶 𝘯𝘰𝘷𝘰 𝘤𝘪𝘤𝘭𝘰 𝘴𝘦𝘫𝘢 𝘵𝘢̃𝘰 𝘣𝘰𝘯𝘪𝘵𝘰 𝘲𝘶𝘢𝘯𝘵𝘰 𝘰 𝘤𝘢𝘳𝘪𝘯𝘩𝘰 𝘲𝘶𝘦 𝘵𝘶 𝘦𝘯𝘵𝘳𝘦𝘨𝘢 𝘢𝘴 𝘱𝘦𝘴𝘴𝘰𝘢𝘴. 𝘘𝘶𝘦 𝘯𝘢̃𝘰 𝘧𝘢𝘭𝘵𝘦𝘮 𝘮𝘰𝘵𝘪𝘷𝘰𝘴 𝘱𝘢𝘳𝘢 𝘴𝘰𝘳𝘳𝘪𝘳, 𝘴𝘢𝘶́𝘥𝘦, 𝘱𝘢𝘻, 𝘤𝘰𝘯𝘲𝘶𝘪𝘴𝘵𝘢𝘴 𝘦 𝘱𝘦𝘴𝘴𝘰𝘢𝘴 𝘲𝘶𝘦 𝘵𝘦 𝘧𝘢𝘤̧𝘢𝘮 𝘴𝘦𝘯𝘵𝘪𝘳 𝘵𝘢̃𝘰 𝘦𝘴𝘱𝘦𝘤𝘪𝘢𝘭 𝘲𝘶𝘢𝘯𝘵𝘰 𝘵𝘶 𝘦́𝘴. 𝘌, 𝘤𝘭𝘢𝘳𝘰, 𝘲𝘶𝘦 𝘢 𝘯𝘰𝘴𝘴𝘢 𝘢𝘮𝘪𝘻𝘢𝘥𝘦 𝘤𝘰𝘯𝘵𝘪𝘯𝘶𝘦 𝘤𝘳𝘦𝘴𝘤𝘦𝘯𝘥𝘰, 𝘴𝘦𝘫𝘢 𝘥𝘦𝘯𝘵𝘳𝘰 𝘥𝘰 𝘙𝘗𝘎 𝘰𝘶 𝘧𝘰𝘳𝘢 𝘥𝘦𝘭𝘦.
+
+𝘖𝘣𝘳𝘪𝘨𝘢𝘥𝘰 𝘱𝘰𝘳 𝘦𝘴𝘴𝘦 𝘳𝘦𝘦𝘯𝘤𝘰𝘯𝘵𝘳𝘰. 𝘌𝘭𝘦 𝘷𝘢𝘭𝘦𝘶 𝘮𝘶𝘪𝘵𝘰 𝘢 𝘱𝘦𝘯𝘢.
+
+𝘍𝘦𝘭𝘪𝘻 𝘢𝘯𝘪𝘷𝘦𝘳𝘴𝘢́𝘳𝘪𝘰, Soso.  SIIIIIIIIIIUUUUUUUUUUUUUUUUUUUU` },
+    { nome: "gi", imagem: "img/msg6.jpg" },
+    { nome: "kat saboy", texto: `Feliz aniversário para a minha futura titia !
+
+Que esse novo ciclo seja repleto de felicidade, saúde, amor e muitas conquistas. Você merece tudo de melhor que a vida pode oferecer! Parabéns pelo seu dia e que ele seja tão especial quanto você. ✨🎂` },
+    { nome: "tim", texto: `Feliz aniversário! Passando pra te desejar um dia muito especial. Espero que tudo dê certo hoje, que você aproveite bastante e tenha muitos momentos bons. Parabéns!` },
+    { nome: "lottie", texto: `Feliz aniversário, sista. 🤍
+Quero agradecer por tudo o que fizeste por mim ao longo do tempo. Obrigada por todas as vezes em que estiveste lá quando eu precisei, por me ouvires e por me apoiares.
+
+Espero de coração que tenhas um dia perfeito e que este e os próximos anos te tragam muita felicidade e tudo aquilo que desejas, mereces ser feliz.
+Mais uma vez, feliz aniversário. Aproveita muito o teu dia. 🤍` },
+  ],
+  mensagemFinal: "(mensagem final pra ela — o gran finale 💜\naqui vai o seu texto de aniversário!)",
+};
+const TOTAL = 9;
+const GRID_FRAMES = 4; // quadros do img/dog-grid.png (caminhada, lado a lado)
+
+/* mapa: # = arbusto/obstáculo · . = chão · 1-8 = amiguinhos · B = bolo · S = início */
+const MAPA = [
+  "#########",
+  "##..B..##",
+  "#.......#",
+  "#..#.#..#",
+  "#.......#",
+  "####9####",
+  "#.......#",
+  "#..###..#",
+  "#...#...#",
+  "##..#..##",
+  "#.......#",
+  "#8#######",
+  "#.......#",
+  "#.##.##.#",
+  "#.......#",
+  "#######7#",
+  "#.......#",
+  "#.#.#.#.#",
+  "#.......#",
+  "####6####",
+  "#.......#",
+  "#.##.##.#",
+  "#.......#",
+  "#...#...#",
+  "##.###.##",
+  "#.......#",
+  "#5#######",
+  "#.......#",
+  "#.###.#.#",
+  "#...#.#.#",
+  "##.##.#.#",
+  "#..#....#",
+  "#..#.####",
+  "#.......#",
+  "#######4#",
+  "#.......#",
+  "#.#####.#",
+  "#.#...#.#",
+  "#.#.#.#.#",
+  "#...#...#",
+  "###.#.###",
+  "#.......#",
+  "####3####",
+  "#.......#",
+  "#.##.##.#",
+  "#..#.#..#",
+  "##.#.#.##",
+  "#..#.#..#",
+  "#.......#",
+  "#2#######",
+  "#.......#",
+  "#.#####.#",
+  "#.....#.#",
+  "##.##.#.#",
+  "#..#..#.#",
+  "#..#.##.#",
+  "#..#....#",
+  "#######1#",
+  "#.......#",
+  "#.#.#.#.#",
+  "#.......#",
+  "##..#..##",
+  "#.......#",
+  "#...S...#",
+  "#########",
+];
+
+const COLS = MAPA[0].length;
+const ROWS = MAPA.length;
+const CORES = ["#f48fb1","#9575cd","#4fc3f7","#ffb74d","#81c784","#f06292","#f8bbd0","#ba68c8","#4db6ac"];
+const DECOS = ["🌸","🎀","⭐","🍓","💜","🌷"];
+
+/* nuvenzinhas: patrulham as fileiras abertas */
+const NUVENS_INIT = [
+  { row: 58, col: 3, dir: 1 },
+  { row: 50, col: 5, dir: -1 },
+  { row: 43, col: 2, dir: 1 },
+  { row: 35, col: 6, dir: -1 },
+  { row: 27, col: 4, dir: 1 },
+  { row: 20, col: 3, dir: -1 },
+  { row: 16, col: 5, dir: 1 },
+  { row: 12, col: 4, dir: -1 },
+  { row: 6,  col: 2, dir: 1 },
+];
+
+/* ---------- estado ---------- */
+let player = { row: 0, col: 0 };
+let inicio = { row: 0, col: 0 };
+let encontrados = new Set();
+let travado = true;       // trava movimento (modais / início)
+let moveLock = false;     // trava anti-spam entre passos
+let nuvens = [];
+let nuvemTimer = null;
+
+const world = document.getElementById("world");
+const mapaEl = document.getElementById("mapa");
+const amiguinhoEls = {};   // digit -> elemento
+let playerEl, tile = 48;
+
+/* ---------- svg placeholder: pinsher com chapéu da kuromi ---------- */
+const DOG_SVG = `
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="50" cy="62" rx="24" ry="20" fill="#2b2326"/>
+  <ellipse cx="50" cy="71" rx="12" ry="8.5" fill="#b5824f"/>
+  <circle cx="40" cy="55" r="3" fill="#b5824f"/>
+  <circle cx="60" cy="55" r="3" fill="#b5824f"/>
+  <circle cx="41" cy="60" r="3.4" fill="#fff"/>
+  <circle cx="59" cy="60" r="3.4" fill="#fff"/>
+  <circle cx="41.8" cy="60.6" r="1.9" fill="#181418"/>
+  <circle cx="58.2" cy="60.6" r="1.9" fill="#181418"/>
+  <ellipse cx="50" cy="68" rx="3.6" ry="2.6" fill="#181418"/>
+  <path d="M50 70 Q50 75 45 75 M50 70 Q50 75 55 75" stroke="#181418" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+  <path d="M27 40 Q14 6 33 15 Q43 20 40 37 Z" fill="#181418"/>
+  <path d="M73 40 Q86 6 67 15 Q57 20 60 37 Z" fill="#181418"/>
+  <path d="M31 21 Q34 12 36 20 Z" fill="#f7a8cf"/>
+  <path d="M69 21 Q66 12 64 20 Z" fill="#f7a8cf"/>
+  <path d="M23 52 Q21 24 50 23 Q79 24 77 52 Q64 46 50 46 Q36 46 23 52 Z" fill="#181418"/>
+  <circle cx="50" cy="34" r="6.2" fill="#ff9ec6"/>
+  <circle cx="47.6" cy="33" r="1.5" fill="#181418"/>
+  <circle cx="52.4" cy="33" r="1.5" fill="#181418"/>
+  <rect x="46.5" y="39" width="7" height="3" rx="1.5" fill="#ff9ec6"/>
+</svg>`;
+
+/* ---------- construir mapa ---------- */
+function construir() {
+  mapaEl.style.setProperty("--cols", COLS);
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const ch = MAPA[r][c];
+      const t = document.createElement("div");
+      t.className = "tile " + ((r + c) % 2 ? "chao-a" : "chao-b");
+      if (ch === "#") {
+        t.className = "tile parede";
+        if ((r * 7 + c * 13) % 5 === 0) {
+          const d = document.createElement("span");
+          d.className = "deco";
+          d.textContent = DECOS[(r * 3 + c) % DECOS.length];
+          t.appendChild(d);
+        }
+      }
+      if (ch === "B") {
+        t.classList.add("meta");
+        t.innerHTML = '<span class="bolo-icone">🎂</span>';
+      }
+      if (ch === "S") { inicio = { row: r, col: c }; }
+      mapaEl.appendChild(t);
+
+      if (ch >= "1" && ch <= "9") {
+        const a = document.createElement("div");
+        a.className = "amiguinho";
+        a.dataset.row = r; a.dataset.col = c;
+        const i = +ch - 1;
+        a.innerHTML =
+          `<span class="balao">💬</span>` +
+          `<div class="corpo" style="background:${CORES[i]}"><span class="num">${ch}</span>` +
+          `<img src="img/${ch}.png" alt=""></div>`;
+        const img = a.querySelector("img");
+        img.onload = () => a.classList.add("tem-img");
+        world.appendChild(a);
+        amiguinhoEls[ch] = a;
+      }
+    }
+  }
+
+  playerEl = document.createElement("div");
+  playerEl.id = "player";
+  playerEl.innerHTML = `<div class="sprite">${DOG_SVG}<img src="img/dog.png" alt=""><div class="gridsprite"></div></div>`;
+  const dogImg = playerEl.querySelector("img");
+  dogImg.onload = () => playerEl.classList.add("tem-img");
+  // se existir img/dog-grid.png (caminhada em GRID_FRAMES quadros), usa ela
+  const gridImg = new Image();
+  gridImg.onload = () => {
+    const gs = playerEl.querySelector(".gridsprite");
+    gs.style.backgroundImage = "url(img/dog-grid.png)";
+    gs.style.backgroundSize = (GRID_FRAMES * 100) + "% 100%";
+    playerEl.classList.add("tem-grid");
+  };
+  gridImg.src = "img/dog-grid.png";
+  world.appendChild(playerEl);
+
+  const slots = document.getElementById("slots");
+  for (let i = 1; i <= TOTAL; i++) {
+    const s = document.createElement("span");
+    s.className = "slot"; s.id = "slot" + i; s.textContent = "💗";
+    slots.appendChild(s);
+  }
+
+  const boloImg = document.querySelector("#boloFinal img");
+  boloImg.onload = () => document.getElementById("boloFinal").classList.add("tem-img");
+  const modalImg = document.getElementById("modalImg");
+  modalImg.onload = () => document.getElementById("modalPic").classList.add("tem-img");
+
+  player = { ...inicio };
+  nuvens = NUVENS_INIT.map(n => {
+    const el = document.createElement("div");
+    el.className = "nuvem"; el.textContent = "☁️";
+    world.appendChild(el);
+    return { ...n, el };
+  });
+}
+
+/* ---------- layout / câmera ---------- */
+function layout() {
+  const vw = Math.min(window.innerWidth, 560);
+  tile = Math.floor(vw / COLS);
+  document.documentElement.style.setProperty("--t", tile + "px");
+  posiciona(playerEl, player.row, player.col);
+  for (const d in amiguinhoEls) {
+    posiciona(amiguinhoEls[d], +amiguinhoEls[d].dataset.row, +amiguinhoEls[d].dataset.col);
+  }
+  nuvens.forEach(n => posiciona(n.el, n.row, n.col));
+  camera(true);
+}
+function posiciona(el, row, col) {
+  el.style.left = col * tile + "px";
+  el.style.top = row * tile + "px";
+}
+function camera(imediato) {
+  const vh = window.innerHeight;
+  const mapH = ROWS * tile;
+  let y = player.row * tile - vh * 0.55;
+  y = Math.max(0, Math.min(y, mapH - vh));
+  if (mapH < vh) y = (mapH - vh) / 2;
+  if (imediato) world.style.transition = "none";
+  world.style.transform = `translateY(${-y}px)`;
+  if (imediato) requestAnimationFrame(() => world.style.transition = "");
+}
+
+/* ---------- movimento ---------- */
+function tenta(dx, dy) {
+  if (travado || moveLock) return;
+  if (dx < 0) playerEl.classList.add("olha-esq");
+  if (dx > 0) playerEl.classList.remove("olha-esq");
+
+  const nr = player.row + dy, nc = player.col + dx;
+  if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) return wobble();
+  const ch = MAPA[nr][nc];
+
+  if (ch === "#") return wobble();
+  if (nuvens.some(n => n.row === nr && n.col === nc)) return wobble();
+
+  if (ch >= "1" && ch <= "9") {
+    if (!encontrados.has(ch)) { encontra(ch, nr, nc); return; }
+  }
+  if (ch === "B") {
+    if (encontrados.size < TOTAL) { avisoBolo(); return; }
+    move(nr, nc);
+    setTimeout(finalizar, 350);
+    return;
+  }
+  move(nr, nc);
+}
+let frame = 0, frameTimer = null;
+function move(nr, nc) {
+  moveLock = true;
+  player.row = nr; player.col = nc;
+  playerEl.classList.remove("pula");
+  void playerEl.offsetWidth;
+  playerEl.classList.add("pula");
+  posiciona(playerEl, nr, nc);
+  // avança um quadro da caminhada (se tiver dog-grid.png)
+  if (playerEl.classList.contains("tem-grid")) {
+    frame = (frame + 1) % GRID_FRAMES;
+    const gs = playerEl.querySelector(".gridsprite");
+    gs.style.backgroundPosition = (frame * 100 / (GRID_FRAMES - 1)) + "% 0";
+    clearTimeout(frameTimer);
+    frameTimer = setTimeout(() => {   // parou de andar → volta pra pose parada
+      frame = 0;
+      gs.style.backgroundPosition = "0% 0";
+    }, 380);
+  }
+  camera();
+  setTimeout(() => moveLock = false, 140);
+}
+function wobble() {
+  playerEl.classList.remove("wobble");
+  void playerEl.offsetWidth;
+  playerEl.classList.add("wobble");
+}
+
+/* ---------- amiguinhos ---------- */
+function encontra(digit, row, col) {
+  travado = true;
+  encontrados.add(digit);
+  const el = amiguinhoEls[digit];
+  el.classList.add("encontrado");
+  el.querySelector(".balao").textContent = "💗";
+  sparkle(row, col);
+
+  document.getElementById("cont").textContent = encontrados.size;
+  document.getElementById("slot" + digit).classList.add("on");
+
+  const dados = CONFIG.amiguinhos[+digit - 1];
+  document.getElementById("modalNum").textContent = digit;
+  document.getElementById("modalNome").textContent = dados.nome;
+  const texto = document.getElementById("modalTexto");
+  const wrap = document.getElementById("cartinhaWrap");
+  if (dados.imagem) {
+    texto.style.display = "none";
+    wrap.classList.add("on");
+    document.getElementById("cartinhaImg").src = dados.imagem;
+  } else {
+    texto.style.display = "";
+    texto.textContent = dados.texto;
+    texto.scrollTop = 0;
+    wrap.classList.remove("on");
+  }
+  const pic = document.getElementById("modalPic");
+  pic.classList.remove("tem-img");
+  pic.style.background = CORES[+digit - 1];
+  const img = document.getElementById("modalImg");
+  img.src = `img/${digit}.png`;
+  if (img.complete && img.naturalWidth) pic.classList.add("tem-img");
+
+  setTimeout(() => document.getElementById("modalAmiguinho").classList.add("aberto"), 250);
+}
+function sparkle(row, col) {
+  const s = document.createElement("span");
+  s.className = "sparkle"; s.textContent = "✨";
+  s.style.left = (col * tile + tile * 0.2) + "px";
+  s.style.top = (row * tile - tile * 0.2) + "px";
+  world.appendChild(s);
+  setTimeout(() => s.remove(), 900);
+}
+
+/* ---------- bolo / final ---------- */
+function avisoBolo() {
+  travado = true;
+  const faltam = TOTAL - encontrados.size;
+  document.getElementById("modalBoloTexto").textContent =
+    faltam === 1 ? "ainda falta 1 amiguinho te esperando no caminho…"
+                 : `ainda faltam ${faltam} amiguinhos te esperando no caminho…`;
+  document.getElementById("modalBolo").classList.add("aberto");
+}
+function finalizar() {
+  travado = true;
+  clearInterval(nuvemTimer);
+  document.getElementById("mensagemFinal").textContent = CONFIG.mensagemFinal;
+  document.getElementById("telaFinal").classList.add("aberto");
+  const emojis = ["🎀","💜","🌸","⭐","💗","🎉"];
+  let i = 0;
+  const chuva = setInterval(() => {
+    const c = document.createElement("span");
+    c.className = "confete";
+    c.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    c.style.left = Math.random() * 100 + "vw";
+    c.style.animationDuration = (2.5 + Math.random() * 2) + "s";
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 5000);
+    if (++i > 80) clearInterval(chuva);
+  }, 90);
+}
+
+/* ---------- nuvens ---------- */
+function tickNuvens() {
+  nuvens.forEach(n => {
+    let nc = n.col + n.dir;
+    const bloqueado = nc < 0 || nc >= COLS || MAPA[n.row][nc] !== "." ||
+                      nuvens.some(o => o !== n && o.row === n.row && o.col === nc);
+    if (bloqueado) { n.dir *= -1; return; }
+    if (nc === player.col && n.row === player.row) {
+      // esbarrou na jogadora: dá um empurrãozinho (se tiver espaço) e quica de volta
+      if (!travado) {
+        const pc = player.col + n.dir;
+        if (pc >= 0 && pc < COLS && MAPA[n.row][pc] === "." &&
+            !nuvens.some(o => o.row === n.row && o.col === pc)) {
+          player.col = pc;
+          posiciona(playerEl, n.row, pc);
+        }
+        wobble();
+      }
+      n.dir *= -1;
+      return;
+    }
+    n.col = nc;
+    posiciona(n.el, n.row, n.col);
+  });
+}
+
+/* ---------- controles ---------- */
+document.addEventListener("keydown", e => {
+  const m = { ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0],
+              w:[0,-1], s:[0,1], a:[-1,0], d:[1,0] };
+  if (m[e.key]) { e.preventDefault(); tenta(...m[e.key]); }
+});
+document.querySelectorAll("#dpad button").forEach(b => {
+  b.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    tenta(+b.dataset.dx, +b.dataset.dy);
+  });
+});
+let swipe = null;
+document.getElementById("viewport").addEventListener("touchstart", e => {
+  swipe = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+}, { passive: true });
+document.getElementById("viewport").addEventListener("touchend", e => {
+  if (!swipe) return;
+  const dx = e.changedTouches[0].clientX - swipe.x;
+  const dy = e.changedTouches[0].clientY - swipe.y;
+  swipe = null;
+  if (Math.abs(dx) < 24 && Math.abs(dy) < 24) return;
+  if (Math.abs(dx) > Math.abs(dy)) tenta(Math.sign(dx), 0);
+  else tenta(0, Math.sign(dy));
+});
+
+/* ---------- botões ---------- */
+/* música: pré-carrega e toca no toque do "começar" (gesto do usuário =
+   liberado no iphone/android/pc). se o navegador barrar, retenta no
+   próximo toque; se musica.mp3 não existir, segue em silêncio. */
+const musica = new Audio("musica.mp3");
+musica.loop = true; musica.volume = 0.55; musica.preload = "auto";
+let musicaExiste = true;
+musica.addEventListener("error", () => { musicaExiste = false; });
+function tocaMusica() {
+  if (!musicaExiste) { document.removeEventListener("pointerdown", tocaMusica); return; }
+  musica.play()
+    .then(() => document.removeEventListener("pointerdown", tocaMusica))
+    .catch(() => {});
+}
+document.getElementById("btnComecar").addEventListener("click", () => {
+  document.getElementById("telaInicio").classList.remove("aberto");
+  travado = false;
+  nuvemTimer = setInterval(tickNuvens, 650);
+  tocaMusica();
+  document.addEventListener("pointerdown", tocaMusica);
+});
+document.getElementById("btnContinuar").addEventListener("click", () => {
+  document.getElementById("modalAmiguinho").classList.remove("aberto");
+  setTimeout(() => travado = false, 200);
+});
+document.getElementById("btnBoloVoltar").addEventListener("click", () => {
+  document.getElementById("modalBolo").classList.remove("aberto");
+  setTimeout(() => travado = false, 200);
+});
+document.getElementById("btnDeNovo").addEventListener("click", () => location.reload());
+
+/* ---------- lightbox: zoom na cartinha ---------- */
+const lb = document.getElementById("lightbox");
+const lbImg = document.getElementById("lbImg");
+let lbS = 1, lbX = 0, lbY = 0;
+const lbPtrs = new Map();
+let pinchBase = null, ultimoTap = { t: 0, x: 0, y: 0 };
+
+function lbAplica() {
+  // limita o passeio pro que sobra da imagem ampliada (+ folguinha)
+  const limX = Math.max(0, (lbImg.clientWidth * lbS - window.innerWidth) / 2) + 30;
+  const limY = Math.max(0, (lbImg.clientHeight * lbS - window.innerHeight) / 2) + 30;
+  lbX = Math.max(-limX, Math.min(limX, lbX));
+  lbY = Math.max(-limY, Math.min(limY, lbY));
+  lbImg.style.transform = `translate(${lbX}px, ${lbY}px) scale(${lbS})`;
+  lbImg.style.cursor = lbS > 1 ? "grab" : "zoom-in";
+}
+function lbZoomEm(cx, cy, novoS) {
+  novoS = Math.max(1, Math.min(8, novoS));
+  // px,py = ponto do zoom relativo ao centro da tela
+  const px = cx - window.innerWidth / 2;
+  const py = cy - window.innerHeight / 2;
+  lbX = px - (px - lbX) * (novoS / lbS);
+  lbY = py - (py - lbY) * (novoS / lbS);
+  lbS = novoS;
+  if (lbS === 1) { lbX = 0; lbY = 0; }
+  lbAplica();
+}
+function lbAbre(src) {
+  lbImg.src = src;
+  lbS = 1; lbX = 0; lbY = 0;
+  lbAplica();
+  lb.classList.add("aberto");
+}
+function lbFecha() {
+  lb.classList.remove("aberto");
+  lbPtrs.clear(); pinchBase = null;
+}
+document.getElementById("cartinhaImg").addEventListener("click", e => lbAbre(e.target.src));
+document.getElementById("lbFechar").addEventListener("click", lbFecha);
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && lb.classList.contains("aberto")) lbFecha();
+});
+lb.addEventListener("wheel", e => {
+  e.preventDefault();
+  lbZoomEm(e.clientX, e.clientY, lbS * (e.deltaY < 0 ? 1.25 : 0.8));
+}, { passive: false });
+lb.addEventListener("pointerdown", e => {
+  if (e.target.closest("#lbFechar")) return; // deixa o ✕ receber o clique
+  e.preventDefault();
+  lb.setPointerCapture(e.pointerId);
+  lbPtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (lbPtrs.size === 2) {
+    const [a, b] = [...lbPtrs.values()];
+    pinchBase = { dist: Math.hypot(a.x - b.x, a.y - b.y), s: lbS };
+  } else if (lbPtrs.size === 1) {
+    // toque duplo: alterna 1x ↔ 2.5x no ponto tocado
+    const agora = Date.now();
+    if (agora - ultimoTap.t < 320 &&
+        Math.hypot(e.clientX - ultimoTap.x, e.clientY - ultimoTap.y) < 40) {
+      lbZoomEm(e.clientX, e.clientY, lbS > 1.1 ? 1 : 2.5);
+      ultimoTap = { t: 0, x: 0, y: 0 };
+    } else {
+      ultimoTap = { t: agora, x: e.clientX, y: e.clientY };
+    }
+  }
+});
+lb.addEventListener("pointermove", e => {
+  if (!lbPtrs.has(e.pointerId)) return;
+  const antes = lbPtrs.get(e.pointerId);
+  lbPtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (lbPtrs.size === 2 && pinchBase) {
+    const [a, b] = [...lbPtrs.values()];
+    const dist = Math.hypot(a.x - b.x, a.y - b.y);
+    lbZoomEm((a.x + b.x) / 2, (a.y + b.y) / 2, pinchBase.s * (dist / pinchBase.dist));
+  } else if (lbPtrs.size === 1 && lbS > 1) {
+    lbX += e.clientX - antes.x;
+    lbY += e.clientY - antes.y;
+    lbAplica();
+  }
+});
+const lbSolta = e => {
+  lbPtrs.delete(e.pointerId);
+  if (lbPtrs.size < 2) pinchBase = null;
+};
+lb.addEventListener("pointerup", lbSolta);
+lb.addEventListener("pointercancel", lbSolta);
+
+/* ---------- vamos! ---------- */
+construir();
+layout();
+window.addEventListener("resize", layout);
+</script>
+</body>
+</html>
