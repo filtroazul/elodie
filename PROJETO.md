@@ -36,12 +36,16 @@ com confete + mensagem final.
 ✅ textos longos: área do modal rola (max-height 42dvh, alinhado à esquerda)
 
 ✅ texto da kat saboy (7) no `CONFIG` ("futura titia")
+✅ texto do dylan (2) no `CONFIG` — TODOS os 9 textos prontos!
+✅ musica.mp3 na raiz, testada tocando
+✅ repositório git → https://github.com/filtroazul/elodie (push a cada mudança;
+   sugerido github pages pra ela jogar pelo link)
+✅ controles celular: swipe + setinhas com andar contínuo ao segurar;
+   instrução da tela inicial adapta pc/celular
 
 🔴 FALTA:
-1. **texto do dylan (2)** (ainda placeholder)
-2. **mensagemFinal** (ainda placeholder)
-3. **arquivo musica.mp3** na raiz (Iagho vai colocar; o código já tá pronto)
-4. **grid de caminhada da elodie** → Iagho gera no gpt a partir do Elodie.png e me manda;
+1. **mensagemFinal** (ainda placeholder)
+2. **grid de caminhada da elodie** → Iagho gera no gpt a partir do Elodie.png e me manda;
    eu processo (rembg/fatiar/normalizar) e salvo como `img/dog-grid.png`.
    **formato que o motor espera**: 4 quadros lado a lado numa única linha (grade 4×1),
    células do MESMO tamanho, personagem de perfil andando PARA A DIREITA (o motor
